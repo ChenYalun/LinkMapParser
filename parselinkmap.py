@@ -9,7 +9,6 @@
 import sys
 import os
 
-
 def read_base_link_map_file(base_link_map_file, base_link_map_result_file):
     try:
         link_map_file = open(base_link_map_file)
@@ -82,10 +81,8 @@ def read_base_link_map_file(base_link_map_file, base_link_map_result_file):
                     else:
                         print "Invalid #3"
                         pass
-            # size_map_sorted = sorted(size_map.items(), key=lambda y: y[1]["size"], reverse=True)
-            # for item in size_map_sorted:
-            #     print "%s\t%.2fM" % (item[1]["file"], item[1]["size"] / 1024.0 / 1024.0)
-            #     pass
+                
+                
             total_size = 0
             a_file_map = {}
             for key in size_map:
@@ -106,23 +103,30 @@ def read_base_link_map_file(base_link_map_file, base_link_map_result_file):
                     print key
 
             a_file_sorted_list = sorted(a_file_map.items(), key=lambda x: x[1], reverse=True)
+            
+#            if need_compare == 0:
             print "%s" % "=".ljust(80, '=')
             print "%s" % (base_link_map_file+"各模块体积汇总").center(87)
             print "%s" % "=".ljust(80, '=')
+            
+            print "base_link_map_result_file : %s" % base_link_map_result_file
+            
             if os.path.exists(base_link_map_result_file):
+                print "Remove Result File : %s" % base_link_map_result_file
                 os.remove(base_link_map_result_file)
                 pass
             print "Creating Result File : %s" % base_link_map_result_file
             output_file = open(base_link_map_result_file, "w")
             for item in a_file_sorted_list:
-                print "%s%.2fM" % (item[0].ljust(50), item[1]/1024.0/1024.0)
-                output_file.write("%s \t\t\t%.2fM\n" % (item[0].ljust(50), item[1]/1024.0/1024.0))
+                print "%s%.2f" % (item[0].ljust(50), item[1]/1024.0)
+                output_file.write("%s \t\t\t%.2f\n" % (item[0].ljust(50), item[1]/1024.0))
                 pass
-            print "%s%.2fM" % ("总体积:".ljust(53), total_size / 1024.0/1024.0)
+            print "%s%.2f" % ("总体积（KB）:".ljust(53), total_size / 1024.0)
             print "\n\n\n\n\n"
-            output_file.write("%s%.2fM" % ("总体积:".ljust(53), total_size / 1024.0/1024.0))
-            link_map_file_tmp.close()
+            output_file.write("%s%.2f" % ("总体积（KB）:".ljust(53), total_size / 1024.0))
             output_file.close()
+
+            link_map_file_tmp.close()
         finally:
             link_map_file.close()
 
@@ -143,31 +147,43 @@ def parse_result_file(result_file_name):
 
 
 def compare(base_bundle_list, target_bundle_list):
-    print "%s" % "=".ljust(80, '=')
-    print "%s" % "比较结果".center(84)
-    print "%s" % "=".ljust(80, '=')
-    print "%s%s%s%s" % ("模块名称".ljust(54), "基线大小".ljust(14), "目标大小".ljust(14), "是否新模块".ljust(14))
+    print "%s" % "=".ljust(100, '=')
+    print "%s" % "版本模块对比结果".center(104)
+    print "%s" % "=".ljust(100, '=')
+    print "%s%s%s%s%s" % ("模块名称".ljust(54), "基线大小（KB）".ljust(14), "目标大小（KB）".ljust(14), "差值".ljust(14), "是否新模块".ljust(14))
+    
+#    for target_bundle_map in target_bundle_list:
+#        target_size = target_bundle_map["size"]
+##        target_size_value = float(target_size.split("KB")[0])
+#        target_size_value = float(target_size)
+    
     for target_bundle_map in target_bundle_list:
         target_name = target_bundle_map["name"]
         target_size = target_bundle_map["size"]
-        target_size_value = float(target_size.split("M")[0])
+        target_size_value = float(target_size.split("KB")[0])
+#        target_size_value = float(target_size)
         has_bundle_in_base = 0
         base_size_value = 0
+        diff_size_value = 0
+        
         for base_bundle_map in base_bundle_list:
             base_name = base_bundle_map["name"]
             if base_name == target_name:
                 base_size = base_bundle_map["size"]
-                base_size_value = float(base_size.split("M")[0])
+                base_size_value = float(base_size.split("KB")[0])
                 has_bundle_in_base = 1
-                if base_size_value < target_size_value:
-                    print "%s%s%s" % (target_name.ljust(50), str("%.2fM" % base_size_value).ljust(10),
-                                      str("%.2fM" % target_size_value).ljust(10))
+                if base_size_value != target_size_value:
+                    diff_size_value = target_size_value - base_size_value
+                    
+                    print "%s%s%s%s" % (target_name.ljust(50), str("%.2f" % base_size_value).ljust(14),
+                                      str("%.2f" % target_size_value).ljust(14), str("%.2f" % diff_size_value).ljust(14))
                     pass
                 break
             pass
+            
         if has_bundle_in_base == 0:
-            print "%s%s%s%s" % (target_name.ljust(50), str("%.2fM" % base_size_value).ljust(10),
-                                str("%.2fM" % target_size_value).ljust(10), "Y".center(10))
+            print "%s%s%s%s%s" % (target_name.ljust(50), str("%.2f" % base_size_value).ljust(14),
+                                str("%.2f" % target_size_value).ljust(14), str("%.2f" % diff_size_value).ljust(14), "Y".center(14))
             pass
         pass
 
@@ -208,8 +224,9 @@ def main():
     else:
         base_output_file = "BaseLinkMapResult.txt"
         pass
+        
     read_base_link_map_file(base_map_link_file, base_output_file)
-
+        
     if need_compare == 1:
         target_map_link_file = sys.argv[2]
         output_file_path = os.path.dirname(target_map_link_file)
@@ -225,10 +242,6 @@ def main():
         target_bundle_list = parse_result_file(target_output_file)
 
         compare(base_bundle_list, target_bundle_list)
-
-    # clean_result_file(base_output_file)
-    # clean_result_file(target_output_file)
-
 
 if __name__ == "__main__":
     main()
